@@ -1,0 +1,7 @@
+/home/kamle/projects/toy-compiler/build/CMakeFiles/intrinsics_gen.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/omp_gen.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/acc_gen.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/RISCVTargetParserTableGen.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/toy.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/edit_cache.dir
+/home/kamle/projects/toy-compiler/build/CMakeFiles/rebuild_cache.dir
