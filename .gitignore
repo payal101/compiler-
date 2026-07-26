@@ -1,0 +1,24 @@
+# Build directory
+build/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Executables
+toy
+
+# Object files
+*.o
+*.obj
+
+# Dependency files
+*.d
+
+# LLVM IR
+*.ll
+
+# VS Code
+.vscode/
