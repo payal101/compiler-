@@ -11,4 +11,6 @@ class Lexer{
     private:
     std::string Input;
     size_t Position=0;
+    char peekNext() const;
+    
 };

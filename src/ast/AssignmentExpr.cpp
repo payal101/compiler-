@@ -21,12 +21,15 @@ llvm::Value* AssignmentExpr::codegen(CodeGenerator& CG)
     }
     llvm::AllocaInst*Ptr=CG.getNamedValue(Name);
     //Allocate memory for an int
-
+if(!Ptr)
+{
     Ptr=CG.getBuilder().CreateAlloca(
         llvm::Type::getInt32Ty(CG.getContext()),
         nullptr,
         Name
     );
+   CG.setNamedValue(Name,Ptr);
+}
 
     std::cout<<"Allocated variable"<<Name<<'\n';
     CG.setNamedValue(Name,Ptr);

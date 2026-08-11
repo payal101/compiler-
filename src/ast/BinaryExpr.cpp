@@ -1,5 +1,8 @@
 #include "ast/BinaryExpr.h"
 #include "codegen/CodeGenerator.h"
+#include <iostream>
+using namespace std;
+
 using namespace llvm;
 
 BinaryExpr::BinaryExpr(
@@ -20,6 +23,11 @@ Value* BinaryExpr::codegen(CodeGenerator&CG)
     auto& Builder=CG.getBuilder();
     Value* L =Left->codegen(CG);
     Value* R=Right->codegen(CG);
+    if(!L||!R)
+    {
+        std::cerr<<"BinaryExpr: nullptr operand\n";
+        return nullptr;
+    }
     switch(Op)
 {
     case '+':

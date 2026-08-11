@@ -9,20 +9,10 @@ class BinaryExpr:public Expr{
         std::unique_ptr<Expr>left,
         std::unique_ptr<Expr>right
     );
-    
 
 
 llvm::Value*codegen(CodeGenerator&CG)override;
-Expr* getLeft() const
-{
-    return Left.get();
-}
-Expr* getRight() const{
-    return Right.get();
-}
-char getOp() const{
-    return Op;
-}
+
 private:
 char Op;
 std::unique_ptr<Expr>Left;

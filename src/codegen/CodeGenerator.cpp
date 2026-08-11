@@ -61,7 +61,27 @@ void CodeGenerator:: setNamedValue(
     NamedValues[name]=value;
 }
 
+void CodeGenerator::pushLoop(llvm::BasicBlock*breakTarget,llvm::BasicBlock*continueTarget)
+{
+    BreakTargets.push_back(breakTarget);
+    ContinueTargets.push_back(continueTarget);
 
+}
+void CodeGenerator::popLoop()
+{
+    BreakTargets.pop_back();
+    ContinueTargets.pop_back();
+}
+llvm::BasicBlock*CodeGenerator::getBreakTarget()
+{
+    return BreakTargets.empty() ?  nullptr:
+    BreakTargets.back();
+}
+llvm::BasicBlock*CodeGenerator::getContinueTarget()
+{
+    return ContinueTargets.empty() ? nullptr:
+    ContinueTargets.back();
+}
 
 
 
