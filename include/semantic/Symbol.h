@@ -1,5 +1,8 @@
 #pragma once
 #include <string>
+#include <vector>
+#include "semantic/Type.h"
+
 enum class SymbolKind{
     Variable,
     Parameter,
@@ -9,15 +12,23 @@ enum class SymbolKind{
 class Symbol{
     private:
     std::string Name;
-    std::string Type;
+    Type ValueType;
     SymbolKind Kind;
+    std::vector<std::string>Parameters;
 public:
 Symbol(
     const std::string& name,
-    const std::string& type,
+    Type type,
     SymbolKind kind
 );
+Symbol(
+    const std::string& name,
+    Type type,
+    SymbolKind kind,
+    const std::vector<std::string>& parameters
+);
 const std::string& getName() const;
-const std::string& getType() const;
+Type getType() const;
 SymbolKind getKind() const;
+const std::vector<std::string>& getParameters() const;
 };

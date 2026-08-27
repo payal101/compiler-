@@ -10,6 +10,15 @@ Arguments(std::move(arguments))
 {
 
 }
+
+const std::string& CallExpr::getName() const
+{
+    return Callee;
+}
+const std::vector<std::unique_ptr<Expr>>& CallExpr::getArguments() const
+{
+    return Arguments;
+}
 llvm::Value*CallExpr::codegen(CodeGenerator&CG)
 {
     llvm::Function* function=CG.getModule()->getFunction(Callee);

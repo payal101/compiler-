@@ -1,24 +1,45 @@
-
 #include "semantic/Symbol.h"
+
 Symbol::Symbol(
-const  std::string& name,
-const  std::string&  type,
-SymbolKind kind
+    const std::string& name,
+    Type type,
+    SymbolKind kind
 )
-:Name(name),
-Type(type),
-Kind(kind)
+    : Name(name),
+      ValueType(type),
+      Kind(kind)
 {
 }
+
+Symbol::Symbol(
+    const std::string& name,
+    Type type,
+    SymbolKind kind,
+    const std::vector<std::string>& parameters
+)
+    : Name(name),
+      ValueType(type),
+      Kind(kind),
+      Parameters(parameters)
+{
+}
+
 const std::string& Symbol::getName() const
 {
-return  Name;
+    return Name;
 }
-const std::string&  Symbol::getType() const
+
+Type Symbol::getType() const
 {
-return Type;
+    return ValueType;
 }
+
 SymbolKind Symbol::getKind() const
 {
-return  Kind;
+    return Kind;
+}
+
+const std::vector<std::string>& Symbol::getParameters() const
+{
+    return Parameters;
 }

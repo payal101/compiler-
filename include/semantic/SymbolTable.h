@@ -1,27 +1,15 @@
+#pragma once
 
+#include "semantic/Symbol.h"
+#include <string>
+#include <unordered_map>
 
-
-Symbol::Symbol(
-const  std::string& name,
-const std::string&  type,
-SymbolKind kind
-)
-
-:Name(name),
-Type(type),
-Kind(kind)
+class SymbolTable
 {
-}
+private:
+    std::unordered_map<std::string, Symbol> Symbols;
 
-const  std::string& Symbol::getName() const
-{
-return Name;
-}
-const std::string& Symbol::getType() const
-{
-return Type;
-}
-SymbolKind Symbol::getKind() const
-{
-return Kind;
-}
+public:
+    bool declare(const Symbol& symbol);
+    Symbol* lookup(const std::string& name);
+};

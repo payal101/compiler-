@@ -45,6 +45,7 @@ llvm::Value*FunctionDec1::codegen(CodeGenerator&CG)
         Name,
         Module
     );
+    llvm::BasicBlock*oldBlock=CG.getBuilder().GetInsertBlock();
 
     llvm::BasicBlock*Entry=
     llvm::BasicBlock::Create(
@@ -69,5 +70,9 @@ llvm::Value*FunctionDec1::codegen(CodeGenerator&CG)
     }
 
     Body->codegen(CG);
+if(oldBlock)
+{
+    CG.getBuilder().SetInsertPoint(oldBlock);
+}
     return function;
 }

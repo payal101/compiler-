@@ -7,7 +7,7 @@ bool SymbolTable::declare(const Symbol& symbol)
         return false;
     }
 
-    Symbols[symbol.getName()] = symbol;
+    Symbols.emplace(symbol.getName(),symbol);
     return true;
 }
 

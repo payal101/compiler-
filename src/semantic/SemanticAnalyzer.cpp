@@ -12,6 +12,11 @@
 #include "ast/BreakStmt.h"
 #include "ast/ContinueStmt.h"
 #include "ast/ForStmt.h"
+#include "ast/FunctionDec1.h"
+#include "ast/ReturnStmt.h"
+#include "semantic/Scope.h"
+#include "ast/CallExpr.h"
+#include "semantic/Type.h"
 #include <iostream>
 #include <vector>
 
@@ -19,7 +24,8 @@
 bool SemanticAnalyzer::analyze(Program*program)
 {
   HasError=false;
-  Scopes.clear();
+  CurrentScope=nullptr;
+  ScopeStorage.clear();
   enterScope();
   for(auto& stmt:program->Statements)
   {
@@ -28,100 +34,157 @@ bool SemanticAnalyzer::analyze(Program*program)
   exitScope();
   return !HasError;
 }
-void SemanticAnalyzer::visit(Expr*expr)
+Type SemanticAnalyzer::visit(Expr*expr)
 {
     if(auto* A=dynamic_cast<AssignmentExpr*>(expr))
     {
         visit(A);
+        return Type::Int;
 
     }
     else if(auto* V=dynamic_cast<VariableExpr*>(expr))
     {
-        visit(V);
+        return visit(V);
     }
     else if(auto* B=dynamic_cast<BinaryExpr*>(expr))
     {
         visit(B);
+        return Type::Int;
     }
     else if(auto*N=dynamic_cast<NumberExpr*>(expr))
     {
         visit(N);
+        return Type::Int;
     }
     else if(auto*C=dynamic_cast<ComparisionExpr*>(expr))
     {
-        visit(C);
+      return  visit(C);
     }
     else if(auto *L=dynamic_cast<BlockStmt*>(expr))
     {
         visit(L);
+        return Type::Int;
     }
     else if(auto *I=dynamic_cast<Ifstmt*>(expr))
     {
         visit(I);
+        return Type::Int;
     }
     else if(auto*W=dynamic_cast<WhileStmt*>(expr))
     {
         visit(W);
+        return Type::Int;
     }
+    else if(auto*F= dynamic_cast<FunctionDec1*>(expr))
+    {
+        visit(F);
+        return Type::Int;
+    }
+
     else if(auto*breakStmt=dynamic_cast<BreakStmt*>(expr))
     {
         visit(breakStmt);
+        return Type::Int;
     }
     else if(auto*continueStmt=dynamic_cast<ContinueStmt*>(expr))
     {
-        visit(continueStmt);    
+        visit(continueStmt); 
+        return Type::Int;   
     }
+    else if(auto*R=dynamic_cast<ReturnStmt*>(expr))
+    {
+        visit(R);
+        return Type::Int;
+    }
+    else if(auto*C=dynamic_cast<CallExpr*>(expr))
+    {
+       return visit(C);
+    }
+    return Type::Error;
 }
-void SemanticAnalyzer::visit(NumberExpr*expr)
+Type SemanticAnalyzer::visit(NumberExpr*expr)
 {
+    return Type::Int;
 
 }
-void SemanticAnalyzer::visit(BinaryExpr*expr)
-{
-    visit(expr->getLeft());
-    visit(expr->getRight());
+Type SemanticAnalyzer::visit(BinaryExpr*expr)
+{ Type leftType = visit(expr->getLeft());
+    Type rightType = visit(expr->getRight());
+    if(leftType==Type::Error||rightType==Type::Error)
+    {
+        return Type::Error;
+    }
+    if(leftType!=rightType)
+    {
+        std::cout<<"Semantic Error:Type mismatch in binary expression";
+        HasError=true;
+        return Type::Error;
+    }
+    return leftType;
 
 }
-void SemanticAnalyzer::visit(ComparisionExpr*expr)
+Type SemanticAnalyzer::visit(ComparisionExpr*expr)
 {
-visit(expr->getLeft());
-visit(expr->getRight());
+Type leftType=visit(expr->getLeft());
+Type rightType=visit(expr->getRight());
+
+if(leftType==Type::Error||rightType==Type::Error)
+{
+    return Type::Error;
+}
+    if(leftType!=rightType)
+    {
+        std::cout<<"Semantic Error : Type mismatch in comparision";
+        HasError=true;
+        return Type::Error;
+    }
+    return Type::Int;
+
 }
 void SemanticAnalyzer::visit(AssignmentExpr*expr)
 {
-visit(expr->getValue());
-Scopes.back().insert(expr->getName());
+Type valueType=visit(expr->getValue());
+if(valueType==Type::Error)
+{
+    return ;
+}
+CurrentScope->declare(
+    Symbol(
+        expr->getName(),
+        valueType,
+        SymbolKind::Variable
+    )
+);
+
 }
 
 void SemanticAnalyzer::enterScope()
 {
-    Scopes.push_back({});
+    ScopeStorage.push_back(
+        std::make_unique<Scope>(CurrentScope)
+    );
+    
+CurrentScope= ScopeStorage.back().get();
 }
 void SemanticAnalyzer::exitScope()
 {
-    Scopes.pop_back();
+    CurrentScope=CurrentScope->getParent();
 }
 bool SemanticAnalyzer::isDefined(const std::string& name)
 {
-    for(auto it=Scopes.rbegin();it!=Scopes.rend();it++)
-    {
-        if(it->find(name)!=it->end())
-        {
-            return true;
-        }
-    }
-    return false;
+    return CurrentScope && CurrentScope->lookup(name)!=nullptr;
 }
 
-void SemanticAnalyzer::visit(VariableExpr*expr)
+Type SemanticAnalyzer::visit(VariableExpr*expr)
 {
-    if(!isDefined(expr->getName()))
+    Symbol*symbol=CurrentScope->lookup(expr->getName());
+    if(!symbol)
     {
-        std::cout<<"Semantic Error:Undefined variable"
-        << expr->getName()<<'\n';
-
-    HasError=true;
+        std::cout<<"Semantic Error: Undefined variable"<<expr->getName()<<'\n';
+        HasError=true;
+        return Type::Error;
     }
+    return symbol->getType();
 }
 
 void SemanticAnalyzer::visit(BlockStmt*expr)
@@ -153,7 +216,7 @@ void SemanticAnalyzer::visit(WhileStmt*expr)
 }
 void SemanticAnalyzer::visit(BreakStmt*expr)
 {
-    if(LoopDepth=0)
+    if(LoopDepth==0)
     {
         std::cout<<"Semantic Error:: break outside loop\n";
         HasError=true;
@@ -176,4 +239,66 @@ void SemanticAnalyzer::visit(ForStmt*expr)
     LoopDepth--;
     visit(expr->getIncrement());
  
+}
+void SemanticAnalyzer::visit(FunctionDec1*expr)
+{
+    CurrentScope->declare(
+        Symbol(
+            expr->getName(),
+            Type::Int,
+            SymbolKind::Function,
+            expr->getParameters()
+        )
+    );
+    enterScope();
+    for(const auto& parameter :expr->getParameters())
+    {
+CurrentScope->declare(
+    Symbol(
+        parameter,
+        Type::Int,
+        SymbolKind::Parameter
+    )
+);
+    }
+    visit(expr->getBody());
+    exitScope();
+}
+void SemanticAnalyzer::visit(ReturnStmt*expr)
+{
+    visit(expr->getValue());
+}
+
+Type SemanticAnalyzer::visit(CallExpr*expr)
+{
+    Symbol* symbol=CurrentScope->lookup(expr->getName());
+    if(!symbol)
+    {
+        std::cout<<"Semantic Error: Undefined function "
+        << expr->getName() <<'\n';
+    HasError=true;
+    return Type::Error;
+    }
+    if(symbol->getKind()!=SymbolKind::Function)
+    {
+        std::cout<<"Semantic Error"<<expr->getName()<<"is not a Function\n";
+        HasError=true;
+        return Type::Error;
+    }
+    for(auto& argument:expr->getArguments())
+    {
+        visit(argument.get());
+    }
+    if(expr->getArguments().size()!=symbol->getParameters().size())
+    {
+        std::cout<<"Semantic Error:Function  "
+        <<expr->getName()
+        <<symbol->getParameters().size()
+        <<"  arguments , got  "
+        <<expr->getArguments().size()
+        <<'\n';
+    HasError=true;
+    return Type::Error;
+    }
+    return Type::Int;
 }
