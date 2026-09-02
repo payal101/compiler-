@@ -11,6 +11,8 @@
 struct CFGNode;
 struct PhiNode{
     std::string Variable;
+    std::string Version;
+    llvm::PHINode*Instruction=nullptr;
     CFGNode* Block;
 };
 struct CFGNode {
@@ -51,6 +53,7 @@ public:
     void findVariableDefinitions();
 void insertPhiNodes();
     void printPhiNodes() const;
+    void renameToSSA();
     CFGNode* getEntry();
 
 
@@ -73,6 +76,11 @@ std::unordered_set<CFGNode*>Visited;
     > NodeMap;
 std::unordered_map<CFGNode*,std::unordered_set<CFGNode*>>DominanceFrontier;
 std::unordered_map<std::string,std::unordered_set<CFGNode*>>VariableDefinition;
+std::unordered_map<std::string,int>VersionCounter;
+std::unordered_map<std::string,std::vector<std::string>>VersionStack;
+std::string newVersion(const std::string& variable);
+std::string currentVersion(const std::string& variable);
+void renameBlock(CFGNode* node);
 
 
 

@@ -485,3 +485,109 @@ void CFG::printPhiNodes() const
         }
     }
 }
+
+std::string CFG::newVersion(const std::string& variable)
+{
+    int version=VersionCounter[variable];
+    VersionCounter[variable]++;
+    std::string name=variable+std::to_string(version);
+  VersionStack[variable].push_back(name);
+  return name;
+}
+std::string CFG::currentVersion(const std::string& variable)
+{
+    if(VersionStack[variable].empty())
+    {
+        return "";
+
+    }
+    return VersionStack[variable].back();
+}
+void CFG::renameBlock(CFGNode*node)
+{
+
+std::unordered_map<std::string,size_t>oldSizes;
+for(const auto&[variable,stack]:VersionStack)
+{
+    oldSizes[variable]=stack.size();
+}
+   if(!node)
+   {
+    return;
+   }
+   std::cout<<"\nRenaming Block";
+   if(node->Block->hasName())
+   {
+    std::cout<<node->Block->getName().str();
+   }
+   else{
+    std::cout<<"<unnamed>";
+   }
+   std::cout<<"\n";
+ 
+   for(PhiNode& phi:node->PhiNodes)
+   {
+    std::string version=newVersion(phi.Variable);
+    phi.Version=version;
+    std::cout<<" Phi"
+    <<phi.Variable
+    <<"->"
+    <<phi.Version
+    <<"\n";
+}
+
+
+   for(llvm::Instruction& instruction:*node->Block)
+   {
+    if(auto* store=llvm::dyn_cast<llvm::StoreInst>(&instruction))
+    {
+        llvm::Value* value=store->getValueOperand();
+        llvm::Value*pointer=store->getPointerOperand();
+        if(auto*alloca =llvm::dyn_cast<llvm::AllocaInst>(pointer))
+        {
+            std::string variable=alloca->getName().str();
+            if(variable.empty())
+            {
+                continue;
+            }
+               std::string current=currentVersion("x");
+    if(!current.empty())
+    {
+        std::cout<<"User x-> "<<current<<"\n";
+    }
+            std::string version=newVersion(variable);
+            std::cout<<"Defination"<<variable
+            <<"->"
+            <<version
+            <<"\n";
+        }
+    }
+   
+   }
+     auto it=DominatorTree.find(node);
+   if(it!=DominatorTree.end())
+   {
+    for(CFGNode*child:it->second)
+    {
+        renameBlock(child); 
+    }
+   }
+   for(const auto&[variable,oldSize]:oldSizes)
+   {
+    VersionStack[variable].resize(oldSize);
+   }
+
+}
+
+void CFG::renameToSSA()
+{
+    VersionCounter.clear();
+    VersionStack.clear();
+
+    CFGNode* entry=getEntry();
+    if(!entry)
+    {
+        return;
+    }
+    renameBlock(entry);
+}

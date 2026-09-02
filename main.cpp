@@ -14,11 +14,13 @@
 int main()
 {
 std::string source = R"(
-x = 0;
-
-while (x < 10) {
-    x = x + 1;
-})";
+x=3;
+if (x>0) {
+    x = 1;
+} else {
+    x = 2;
+}
+y = x + 3;)";
 
 
 Lexer lexer(source);
@@ -42,7 +44,7 @@ if (!program)
     return 1;
 }
 
-std::cout<<"Statements"
+std::cout<<" Number of executable statements are "
 <<program->Statements.size()   
 <<'\n';
 
@@ -110,6 +112,8 @@ cfg.printDominanceFrontiers();
 cfg.findVariableDefinitions();
 cfg.insertPhiNodes();
 cfg.printPhiNodes();
+cfg.renameToSSA();
+
 CG.getModule()->print(llvm::outs(), nullptr);
 
     return 0;
