@@ -7,6 +7,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/BasicBlock.h"
 #include <unordered_set>
+#include "llvm/IR/Value.h"
 #include <string>
 struct CFGNode;
 struct PhiNode{
@@ -14,6 +15,8 @@ struct PhiNode{
     std::string Version;
     llvm::PHINode*Instruction=nullptr;
     CFGNode* Block;
+    std::unordered_map<CFGNode*,std::string>Incoming;
+
 };
 struct CFGNode {
     llvm::BasicBlock* Block;
@@ -21,7 +24,6 @@ struct CFGNode {
     std::vector<CFGNode*> Successors;
     std::vector<CFGNode*> Predecessors;
   std::vector<PhiNode> PhiNodes;
-   
 
 
     explicit CFGNode(llvm::BasicBlock* block)
@@ -54,6 +56,8 @@ public:
 void insertPhiNodes();
     void printPhiNodes() const;
     void renameToSSA();
+    void createLLVMPhis();
+    void replaceLoadWithSSA();
     CFGNode* getEntry();
 
 
@@ -78,6 +82,10 @@ std::unordered_map<CFGNode*,std::unordered_set<CFGNode*>>DominanceFrontier;
 std::unordered_map<std::string,std::unordered_set<CFGNode*>>VariableDefinition;
 std::unordered_map<std::string,int>VersionCounter;
 std::unordered_map<std::string,std::vector<std::string>>VersionStack;
+  std::unordered_map<std::string,llvm::Value*>SSAValues;
+  std::unordered_map<CFGNode*,std::unordered_map<std::string,std::string>>BlockVersions;
+   
+
 std::string newVersion(const std::string& variable);
 std::string currentVersion(const std::string& variable);
 void renameBlock(CFGNode* node);

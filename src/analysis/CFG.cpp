@@ -534,9 +534,9 @@ for(const auto&[variable,stack]:VersionStack)
     <<"->"
     <<phi.Version
     <<"\n";
+
+   
 }
-
-
    for(llvm::Instruction& instruction:*node->Block)
    {
     if(auto* store=llvm::dyn_cast<llvm::StoreInst>(&instruction))
@@ -550,20 +550,43 @@ for(const auto&[variable,stack]:VersionStack)
             {
                 continue;
             }
-               std::string current=currentVersion("x");
+    std::string current=currentVersion(variable);
+
+           
     if(!current.empty())
     {
         std::cout<<"User x-> "<<current<<"\n";
     }
             std::string version=newVersion(variable);
+                SSAValues[version]=value;
             std::cout<<"Defination"<<variable
             <<"->"
             <<version
             <<"\n";
         }
     }
-   
+   for(const auto&[variable,stack]:VersionStack)
+   {
+    if(!stack.empty())
+    {
+        BlockVersions[node][variable]=stack.back();
+    }
    }
+   }
+for(CFGNode* successor:node->Successors)
+{
+    for(PhiNode& phi:successor->PhiNodes)
+    {
+        std::string version=currentVersion(phi.Variable);
+        if(!version.empty())
+        {
+            phi.Incoming[node]=version;
+
+        }
+    }
+}
+
+
      auto it=DominatorTree.find(node);
    if(it!=DominatorTree.end())
    {
@@ -576,18 +599,110 @@ for(const auto&[variable,stack]:VersionStack)
    {
     VersionStack[variable].resize(oldSize);
    }
+   
 
 }
 
+void CFG::replaceLoadWithSSA()
+{
+   for(const auto&nodePtr:Nodes)
+   {
+    CFGNode* node=nodePtr.get();
+    for(auto it=node->Block->begin();it!=node->Block->end();)
+    {
+        llvm::Instruction& instruction=*it;
+        auto*load=llvm::dyn_cast<llvm::LoadInst>(&instruction);
+        if(!load)
+        {
+            ++it;
+            continue;
+        }
+        llvm::Value*pointer=load->getPointerOperand();
+        auto*alloca=llvm::dyn_cast<llvm::AllocaInst>(pointer);
+
+    if(!alloca)
+    {
+        ++it;
+        continue;
+    }
+    std::string variable =alloca->getName().str();
+    bool erased=false;
+    auto blockIt=BlockVersions.find(node);
+    if(blockIt!=BlockVersions.end())
+    {
+        auto versionIt=blockIt->second.find(variable);
+        if(versionIt!=blockIt->second.end())
+        {
+            std::string version=versionIt->second;
+            auto valueIt=SSAValues.find(version);
+            if(valueIt!=SSAValues.end())
+            {
+                load->replaceAllUsesWith(valueIt->second);
+                std::cout<<"Replaced load of "<<variable<<"with"<<version<<"\n";
+                it=load->eraseFromParent();
+                erased=true;
+            }
+        }
+    }
+    if(!erased)
+    {
+        it++;
+    }
+    }
+   }
+}
+
+void CFG::createLLVMPhis()
+{
+    for(const auto&nodePtr:Nodes)
+    {
+        CFGNode* node=nodePtr.get();
+        if(node->PhiNodes.empty())
+        {
+            continue;
+        }
+        for(PhiNode& phi:node->PhiNodes)
+        {
+            llvm::PHINode* llvmPhi=llvm::PHINode::Create(
+                llvm::Type::getInt32Ty(
+                    node->Block->getContext()
+                ),
+                phi.Incoming.size(),
+                phi.Version,
+                &*node->Block->begin()
+            );
+        
+        for(const auto& [pred,incomingVersion]:phi.Incoming)
+        {
+            auto it=SSAValues.find(incomingVersion);
+            if(it==SSAValues.end())
+            {
+                continue;
+
+            }
+            llvmPhi->addIncoming(
+                it->second,
+                pred->Block
+            );
+        }
+        phi.Instruction=llvmPhi;
+        SSAValues[phi.Version]=llvmPhi;
+    }
+    }
+}
 void CFG::renameToSSA()
 {
     VersionCounter.clear();
     VersionStack.clear();
-
+SSAValues.clear();
     CFGNode* entry=getEntry();
     if(!entry)
     {
         return;
     }
     renameBlock(entry);
+    createLLVMPhis();
+    replaceLoadWithSSA();
+    BlockVersions.clear();
+
 }
