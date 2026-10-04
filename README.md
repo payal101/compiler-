@@ -51,7 +51,7 @@ Each AST node has a `codegen()` method that emits LLVM IR. Variables are lowered
 
 ### `if` without `else`
 
-![LLVM IR for an if statement without else](docs/llvm_ir_if_then.png)
+https://github.com/payal101/compiler-/blob/main/llvm_ir_if_then.png
 
 - With no `else`, the false edge goes straight to the join block: `br i1 %cmptmp, label %then, label %ifend`.
 - The `then` block reads `x`, computes `x + 1`, and stores the result into `y`.
