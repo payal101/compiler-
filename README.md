@@ -42,8 +42,7 @@ A from-scratch toy compiler. It parses a small language into an AST, generates *
 Each AST node has a `codegen()` method that emits LLVM IR. Variables are lowered to `alloca` / `store` / `load`, and `if` statements become `then` / `else` / `ifend` basic blocks joined by conditional and unconditional branches.
 
 ### `if` with `else`
-
-![LLVM IR for an if/else statement](docs/llvm_ir_if_else.png)
+https://github.com/payal101/compiler-/blob/main/llvm_ir_if_else.png
 
 - `x` is allocated and stored (`x = 3`), then loaded and compared with `5` using `icmp slt`.
 - `br i1 %cmptmp, label %then, label %else` splits control flow.
