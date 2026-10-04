@@ -71,8 +71,7 @@ flowchart TD
 ## Demo 2: CFG, DFS and dominators
 
 The analysis passes print the CFG, a DFS traversal and the dominator sets for the same diamond:
-
-![CFG, DFS and dominator output](docs/cfg_dfs_dominators_output.png)
+https://github.com/payal101/compiler-/blob/main/cfg_dfs_dominators_output.png
 
 1. **CFG**: every `BasicBlock` is printed with its successors and predecessors. `entry` has no predecessors, and `ifend` has two (`then`, `else`).
 2. **DFS**: blocks are visited in depth-first order from `entry`.
