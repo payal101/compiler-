@@ -1,158 +1,274 @@
-# Toy Compiler: LLVM IR Codegen, CFG, Dominators and SSA
+# Toy Compiler: From AST to SSA
 
-A from-scratch toy compiler. It parses a small language into an AST, generates **LLVM IR**, and runs its own **control flow graph** and **dominator** analyses. It is being extended toward full **SSA construction** (dominator tree, dominance frontiers, phi nodes) and SSA-based optimizations.
+A compiler implementation in C++ exploring the stages of a compiler pipeline, from lexical analysis and parsing to LLVM IR generation and control-flow analysis.
 
-> **Status: work in progress.** AST, LLVM IR codegen, CFG, DFS and dominator sets work today. Dominator tree, dominance frontiers, phi placement and SSA optimizations are on the roadmap below.
+The project is an exercise in understanding compiler internals by implementing the underlying data structures and algorithms rather than treating compilation as a black box.
 
----
+**Current focus:** Control-flow analysis, dominators, dominance frontiers and Static Single Assignment (SSA) construction.
 
-## Table of contents
-
-- [Status](#status)
-- [Demo 1: LLVM IR codegen](#demo-1-llvm-ir-codegen)
-- [Demo 2: CFG, DFS and dominators](#demo-2-cfg-dfs-and-dominators)
-- [How it works](#how-it-works)
-- [Project structure](#project-structure)
-- [Building and running](#building-and-running)
-- [Roadmap](#roadmap)
-- [References](#references)
+> **Status:** Work in progress. Features and implementation details are evolving.
 
 ---
 
-## Status
+## Overview
 
-| Component                          | Status        |
-|------------------------------------|---------------|
-| AST (assignment, if / else)        | Done          |
-| LLVM IR codegen                    | Done          |
-| Basic blocks                       | Done          |
-| CFG (successors / predecessors)    | Done          |
-| DFS traversal                      | Done          |
-| Dominator sets                     | Done          |
-| Immediate dominators / dom tree    | In progress   |
-| Dominance frontiers                | Planned       |
-| Phi node placement                 | Planned       |
-| Variable renaming (SSA)            | Planned       |
-| SSA optimizations                  | Planned       |
+The current compiler pipeline:
 
----
-
-## Demo 1: LLVM IR codegen
-
-Each AST node has a `codegen()` method that emits LLVM IR. Variables are lowered to `alloca` / `store` / `load`, and `if` statements become `then` / `else` / `ifend` basic blocks joined by conditional and unconditional branches.
-
-### `if` with `else`
-https://github.com/payal101/compiler-/blob/main/llvm_ir_if_else.png
-
-- `x` is allocated and stored (`x = 3`), then loaded and compared with `5` using `icmp slt`.
-- `br i1 %cmptmp, label %then, label %else` splits control flow.
-- Both branches end with `br label %ifend`, so `ifend` has two predecessors (`%then` and `%else`). This is the join point where phi nodes will be needed once SSA is in place.
-
-### `if` without `else`
-
-https://github.com/payal101/compiler-/blob/main/llvm_ir_if_then.png
-
-- With no `else`, the false edge goes straight to the join block: `br i1 %cmptmp, label %then, label %ifend`.
-- The `then` block reads `x`, computes `x + 1`, and stores the result into `y`.
-
-The CFG for the if/else case is the diamond below:
-
-```mermaid
-flowchart TD
-    entry --> then
-    entry --> else
-    then --> ifend
-    else --> ifend
+```text
+Source Program
+      |
+      v
+   Lexer
+      |
+      v
+   Parser
+      |
+      v
+ Abstract Syntax Tree (AST)
+      |
+      v
+Semantic Analysis
+      |
+      v
+ LLVM IR Generation
+      |
+      v
+ Control Flow Graph (CFG)
+      |
+      v
+ Dominator Analysis
+      |
+      v
+ Dominator Tree
+      |
+      v
+ Dominance Frontiers
+      |
+      v
+  Phi Placement
+      |
+      v
+ Variable Renaming
+      |
+      v
+  SSA Representation
 ```
 
+## Implemented Components
+
+| Component | Description |
+|---|---|
+| Lexer | Tokenizes source programs |
+| Parser | Constructs an AST from tokens |
+| AST | Represents expressions and statements |
+| Semantic Analysis | Performs semantic checks using symbol and scope information |
+| LLVM IR Generation | Lowers AST constructs into LLVM IR |
+| Basic Blocks | Represents units of straight-line execution |
+| Control Flow Graph | Models basic blocks and their control-flow relationships |
+| DFS | Traverses the CFG |
+| Dominator Analysis | Computes dominator sets |
+| Immediate Dominators | Identifies immediate dominators |
+| Dominator Tree | Represents the immediate-dominator relationships |
+| Dominance Frontiers | Identifies control-flow join points |
+| Phi Placement | Inserts phi nodes at relevant join points |
+| SSA Renaming | Assigns unique versions to variable definitions |
+
+*Implementation and testing status of individual analysis passes is still being refined.*
+
+## Compiler Internals
+
+### 1. Lexical Analysis and Parsing
+
+The lexer converts source text into tokens, which are consumed by the parser to construct an Abstract Syntax Tree.
+
+The AST provides a structured representation of the program and separates language syntax from subsequent compiler passes.
+
+### 2. Semantic Analysis
+
+Semantic analysis uses symbol tables and scope information to reason about identifiers and their declarations.
+
+### 3. LLVM IR Generation
+
+AST nodes generate LLVM IR through code-generation methods.
+
+The current implementation uses LLVM constructs such as:
+
+- `alloca` for stack allocation
+- `load` for reading values
+- `store` for writing values
+- Conditional and unconditional branches for control flow
+
+For example, an `if-else` statement generates separate basic blocks for its branches, which eventually converge at a join block.
+
+### 4. Control Flow Graphs
+
+The generated LLVM IR is analyzed to construct a Control Flow Graph.
+
+Each basic block maintains its successors and predecessors, allowing the compiler to reason about possible execution paths.
+
+The CFG is also used for subsequent graph analyses.
+
+### 5. Dominator Analysis
+
+A basic block \(A\) dominates a block \(B\) if every path from the entry block to \(B\) passes through \(A\).
+
+The project explores:
+
+- Dominator set computation
+- Immediate dominators
+- Dominator tree construction
+- Dominance frontier computation
+
+These concepts form the foundation for SSA construction.
+
+### 6. Static Single Assignment (SSA)
+
+SSA is an intermediate representation in which each variable is assigned exactly once.
+
+The implementation explores the relationship between dominance information and SSA construction:
+
+1. Compute dominance frontiers.
+2. Identify locations requiring phi nodes.
+3. Insert phi nodes for variables with multiple reaching definitions.
+4. Rename variable definitions using the dominator tree.
+
 ---
 
-## Demo 2: CFG, DFS and dominators
+## Examples and Output
 
-The analysis passes print the CFG, a DFS traversal and the dominator sets for the same diamond:
-https://github.com/payal101/compiler-/blob/main/cfg_dfs_dominators_output.png
+### LLVM IR: Conditional Control Flow
 
-1. **CFG**: every `BasicBlock` is printed with its successors and predecessors. `entry` has no predecessors, and `ifend` has two (`then`, `else`).
-2. **DFS**: blocks are visited in depth-first order from `entry`.
-3. **Dominators**: `Dom(B)` lists every block that lies on all paths from `entry` to `B`. For example, `Dom(then) = {then, entry}`.
+The following example illustrates the generated LLVM IR for an `if-else` statement.
+
+**If-else construction**
+
+![LLVM IR for if-else](llvm_ir_if_else.png)
+
+**If construction without an else branch**
+
+![LLVM IR for if statement](llvm_ir_if_then.png)
+
+### CFG, DFS and Dominators
+
+The following output illustrates CFG construction, depth-first traversal and dominator analysis.
+
+![CFG, DFS and Dominator output](cfg_dfs_dominators_output.png)
+
+For a diamond-shaped control-flow graph:
+
+```text
+          entry
+          /   \
+       then   else
+          \   /
+          ifend
+```
+
+The entry block dominates every reachable block. The `ifend` block has two predecessors, making it an interesting join point for subsequent SSA construction.
 
 ---
 
-## How it works
+## Technology Stack
 
-### Pipeline
-
-```
-source  ->  AST  ->  LLVM IR (alloca/load/store)  ->  CFG  ->  dominators
-                                                                  |
-                                                                  v
-                          dominance frontiers  ->  phi placement  ->  renaming  ->  SSA opts
-```
-
-### Codegen
-
-Every AST node (`AssignmentExpr`, `IfStmt`, ...) implements `codegen()`. Variables live in stack slots (`alloca`), reads are `load`, writes are `store`. This keeps codegen simple and defers SSA construction to a dedicated pass.
-
-### Basic blocks and CFG
-
-Each `BasicBlock` stores a name, a list of **successors** and a list of **predecessors**. The CFG can be printed for inspection.
-
-### Dominators
-
-Block `A` **dominates** block `B` if every path from `entry` to `B` passes through `A`. Every block dominates itself, so `B` is always in `Dom(B)`.
-
-### SSA (in progress)
-
-- **Dominator tree**: connect each block to its immediate dominator.
-- **Dominance frontier**: for a block `A`, the blocks where `A`'s dominance stops. These are the join points that may need a phi node.
-- **Phi nodes**: for each variable, insert a phi at the iterated dominance frontier of the blocks that define it.
-- **Renaming**: walk the dominator tree and give each definition a unique version.
+- **Language:** C++17
+- **Compiler Infrastructure:** LLVM 18
+- **IR / Compiler Infrastructure:** LLVM and MLIR
+- **Build System:** CMake
+- **Analysis:** Graph algorithms and control-flow analysis
 
 ---
 
-## Project structure
+## Project Structure
 
-```
-.
-├── include/        # Headers: AST, basic block, CFG, dominators
-├── src/            # Implementations and driver
-├── docs/           # Screenshots used in this README
+```text
+compiler-/
+│
+├── include/
+│   ├── ast/
+│   ├── analysis/
+│   ├── codegen/
+│   ├── lexer/
+│   ├── parser/
+│   └── semantic/
+│
+├── src/
+│   ├── ast/
+│   ├── analysis/
+│   ├── codegen/
+│   ├── lexer/
+│   ├── parser/
+│   └── semantic/
+│
+├── tests/
+│
+├── main.cpp
+├── CMakeLists.txt
 └── README.md
 ```
 
-Adjust the tree above to match your actual files.
-
 ---
 
-## Building and running
+## Building the Project
+
+### Prerequisites
+
+- C++17-compatible compiler
+- CMake 3.16 or later
+- LLVM 18
+- MLIR 18
+
+The current CMake configuration expects LLVM and MLIR to be installed under `/usr/lib/llvm-18`.
+
+### Build
 
 ```bash
-# Replace with your actual commands, for example:
-clang++ -std=c++17 -Iinclude src/*.cpp $(llvm-config --cxxflags --ldflags --libs core) -o toy
-./toy
+git clone https://github.com/payal101/compiler-.git
+
+cd compiler-
+
+cmake -S . -B build \
+  -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm \
+  -DMLIR_DIR=/usr/lib/llvm-18/lib/cmake/mlir
+
+cmake --build build
+```
+
+### Run
+
+```bash
+./build/toy
+```
+
+The current driver uses an embedded sample program and prints intermediate analysis output and generated LLVM IR.
+
+### Run the Symbol Table Test
+
+```bash
+./build/SymbolTableTest
 ```
 
 ---
 
 ## Roadmap
 
-- [x] AST and LLVM IR codegen for assignments and if / else
-- [x] Basic blocks and CFG
+- [x] Lexical analysis and parsing
+- [x] AST construction
+- [x] Semantic analysis and symbol tables
+- [x] LLVM IR generation
+- [x] Basic block and CFG construction
 - [x] DFS traversal
-- [x] Dominator sets
+- [x] Dominator analysis
 - [x] Immediate dominators and dominator tree
-- [x] Dominance frontiers and iterated dominance frontier
-- [x] Phi node placement
-- [x] Variable renaming (full SSA construction)
-- [ ] SSA verification pass
-- [ ] SSA-based optimizations: constant propagation, copy propagation, dead code elimination
-- [ ] Out-of-SSA translation
+- [x] Dominance frontiers
+- [ ] Validate phi-node placement across more complex control-flow graphs
+- [ ] Validate SSA renaming, including loops and nested control flow
+- [ ] Add an SSA verification pass
+- [ ] Explore SSA-based optimizations
+- [ ] Improve test coverage and build portability
 
 ---
 
-## References
 
-- K. Cooper, T. Harvey, K. Kennedy. *A Simple, Fast Dominance Algorithm*.
-- R. Cytron et al. *Efficiently Computing Static Single Assignment Form and the Control Dependence Graph*, 1991.
-- A. Appel. *Modern Compiler Implementation*, SSA chapters.
-- LLVM Language Reference Manual and the Kaleidoscope tutorial.
+--
+
+**This project is a work in progress.** The goal is to understand how compiler representations and analyses fit together, from source-level syntax to intermediate representations and control-flow transformations.
